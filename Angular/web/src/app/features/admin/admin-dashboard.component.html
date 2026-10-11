@@ -1,0 +1,147 @@
+<div class="crm-shell" [style.--admin-font-scale]="fontScale / 100" [style.--admin-font-family]="fonts[fontFamily]">
+  <aside class="crm-sidebar" [class.open]="mobileMenuOpen()">
+    <div class="crm-brand">
+      <span class="crm-brand-mark">DS</span>
+      <span><strong>Dominio</strong><em>de la Sierra</em><small>Gestión de bodega</small></span>
+      <button class="mobile-close" type="button" aria-label="Cerrar menú" (click)="mobileMenuOpen.set(false)">×</button>
+    </div>
+
+    <nav aria-label="Navegación de gestión">
+      <p class="nav-label">Operaciones</p>
+      @for (item of navItems; track item.id) {
+        <button type="button" [class.active]="navActive(item.id)" (click)="navigate(item.id)">
+          <span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="iconPath(item.icon)"></path></svg></span>
+          <span><strong>{{ item.label }}</strong><small>{{ item.caption }}</small></span>
+          @if (item.id === 'orders') { <b>{{ data.orders().length }}</b> }
+          @if (item.id === 'inventory' && data.lowStockCount()) { <b class="alert-count">{{ data.stockDemoMode ? data.lowStockCount() : "—" }}</b> }
+        </button>
+      }
+    </nav>
+
+    <div class="sidebar-foot">
+      <div class="harvest-card">
+        <span>Vendimia 2026</span>
+        <strong>La bodega está al día</strong>
+        <i><b style="width: 78%"></b></i>
+        <small>78% del objetivo anual</small>
+      </div>
+      <button class="profile-card" type="button" (click)="navigate('settings')">
+        <span>AG</span><span><strong>Álvaro García</strong><small>Administrador</small></span><i>⌄</i>
+      </button>
+    </div>
+  </aside>
+
+  @if (mobileMenuOpen()) { <button class="sidebar-backdrop" type="button" aria-label="Cerrar menú" (click)="mobileMenuOpen.set(false)"></button> }
+
+  <main class="crm-main">
+    <header class="crm-topbar">
+      <div class="topbar-title">
+        <button class="mobile-menu" type="button" aria-label="Abrir menú" (click)="mobileMenuOpen.set(true)">☰</button>
+        <div><span>{{ currentDate }}</span><h1>{{ currentNavigation().label }}</h1></div>
+      </div>
+      <div class="topbar-actions">
+        <label class="global-search" [class.open]="searchOpen()"><span>⌕</span><input [(ngModel)]="globalQuery" (keydown.enter)="runGlobalSearch()" aria-label="Buscar en el panel" placeholder="Buscar pedido, cliente o vino"><button type="button" aria-label="Buscar en el panel" (click)="runGlobalSearch()">Buscar</button></label>
+        <button class="status-pill" type="button" (click)="showNotice('El panel aún no consume la API administrativa. No se realizan cambios en la base de datos.')">{{ data.stockDemoMode ? 'Panel de demostración' : 'API administrativa pendiente' }}</button>
+        <div class="notification-wrap" (dsDismissOutside)="notificationsOpen.set(false)">
+          <button class="icon-button" type="button" aria-label="Abrir avisos" [attr.aria-expanded]="notificationsOpen()" (click)="notificationsOpen.set(!notificationsOpen())"><svg class="notification-bell" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4M12 2v1" /></svg>@if(notifications().length){<b>{{notifications().length}}</b>}</button>
+          @if(notificationsOpen()){<div class="notification-popover"><div><strong>Avisos · {{notifications().length}}</strong><button aria-label="Cerrar avisos" (click)="notificationsOpen.set(false)">×</button></div>@for(n of notifications();track n.id){<p><button class="notification-link" (click)="navigate(n.section)"><strong>{{n.title}}</strong><small>{{n.detail}}</small></button><button class="dismiss-notification" aria-label="Descartar aviso" (click)="dismissNotification(n.id)">×</button></p>}@empty{<p>Todo revisado. No hay avisos pendientes.</p>}@if(notifications().length){<button class="row-action" (click)="dismissAllNotifications()">Descartar todos</button>}</div>}
+        </div>
+      </div>
+    </header>
+
+    <div class="environment-note" role="status"><span>Panel de demostración</span> Las acciones no modifican la base de datos. @if(data.stockDemoMode) { El catálogo y el stock de este panel son ejemplos, separados de la tienda. } @else { Catálogo e inventario administrativos todavía no conectados: no mostramos stock supuesto. } Pedidos, clientes, finanzas, visitas y facturación son datos de ejemplo.</div>
+
+    <div class="crm-content">
+      @switch (section()) {
+        @case ('overview') {
+          <section class="overview-hero">
+            <div><p class="overline">Pulso del negocio</p><h2>Buenos días.<br><em>La Sierra se mueve.</em></h2><p>Ventas, pedidos y bodega reunidos en una vista para decidir qué necesita atención hoy.</p></div>
+            <div class="hero-vintage"><span>Producción anual</span><strong>8.000</strong><small>botellas · edición limitada</small><i><b style="width: 68%"></b></i><p>5.420 botellas registradas</p></div>
+          </section>
+
+          <section class="metric-grid" aria-label="Indicadores principales">
+            <article><span>Facturación septiembre</span><strong>{{ data.revenue() | currency:'EUR':'symbol':'1.0-0':'es' }}</strong><small class="positive">↗ 14,8% frente a agosto</small><i>01</i><button type="button" (click)="navigate('finance')">Ver facturación <b>↗</b></button></article>
+            <article><span>Pedidos este mes</span><strong>{{ data.orderCount() }}</strong><small class="positive">↗ 17 pedidos más</small><i>02</i><button type="button" (click)="navigate('orders')">Ver pedidos <b>↗</b></button></article>
+            <article><span>Ticket medio</span><strong>{{ data.averageTicket() | currency:'EUR':'symbol':'1.2-2':'es' }}</strong><small>Objetivo mensual: 82 €</small><i>03</i><button type="button" (click)="navigate('finance')">Analizar ticket <b>↗</b></button></article>
+            <article [class.needs-attention]="data.lowStockCount()"><span>Stock que revisar</span><strong>{{ data.stockDemoMode ? data.lowStockCount() : "—" }}</strong><small>Referencias con ≤ 10 uds.</small><i>04</i><button type="button" (click)="navigate('inventory')">Revisar stock <b>↗</b></button></article>
+          </section>
+
+          <section class="dashboard-grid">
+            <article class="panel sales-panel">
+              <div class="panel-head"><div><p class="overline">Últimos seis meses</p><h3>Evolución de ventas</h3></div><button type="button" (click)="navigate('finance')">Ver finanzas ↗</button></div>
+              <div class="sales-summary"><strong>{{ data.revenue() | currency:'EUR':'symbol':'1.0-0':'es' }}</strong><span>Septiembre · {{ data.orderCount() }} pedidos</span></div>
+              <div class="bar-chart" aria-label="Facturación mensual">
+                @for (point of data.sales(); track point.label) {
+                  <div><span [style.height.%]="point.revenue / maximumRevenue() * 100"><i>{{ point.revenue | currency:'EUR':'symbol':'1.0-0':'es' }}</i></span><small>{{ point.label }}</small></div>
+                }
+              </div>
+            </article>
+
+            <article class="panel channel-panel">
+              <div class="panel-head"><div><p class="overline">Procedencia</p><h3>Canales de venta</h3></div></div>
+              <div class="donut-wrap"><div class="donut"><span><strong>108</strong><small>pedidos</small></span></div><ul><li><i></i><span>Web</span><strong>62%</strong></li><li><i></i><span>Bodega</span><strong>25%</strong></li><li><i></i><span>Restauración</span><strong>13%</strong></li></ul></div>
+              <p class="panel-insight">La tienda online aporta <strong>2 de cada 3 pedidos</strong> este mes.</p>
+            </article>
+          </section>
+
+          <section class="dashboard-grid lower-grid">
+            <article class="panel orders-panel">
+              <div class="panel-head"><div><p class="overline">Actividad reciente</p><h3>Pedidos que avanzan</h3></div><button type="button" (click)="navigate('orders')">Todos los pedidos ↗</button></div>
+              <div class="compact-orders">
+                @for (order of data.orders().slice(0, 5); track order.id) {
+                  <button type="button" (click)="navigate('orders')"><span class="order-avatar">{{ order.customer.charAt(0) }}</span><span><strong>{{ order.number }}</strong><small>{{ order.customer }} · {{ order.city }}</small></span><span class="status" [attr.data-status]="order.status">{{ statusLabel(order.status) }}</span><b>{{ order.total | currency:'EUR':'symbol':'1.2-2':'es' }}</b></button>
+                }
+              </div>
+            </article>
+            <article class="panel stock-panel">
+              <div class="panel-head"><div><p class="overline">Atención</p><h3>Stock comprometido</h3></div><button type="button" (click)="navigate('inventory')">Abrir inventario ↗</button></div>
+              @for (product of lowStock(); track product.id) {
+                <div class="stock-alert"><span class="stock-product-photo"><img [src]="productImage(product)" [alt]="product.name"></span><span><strong>{{ product.name }}</strong><small>{{ product.reference }} · {{ product.reserved }} reservadas</small><i><b [style.width.%]="available(product) / 12 * 100"></b></i></span><em>{{ available(product) }} uds.</em></div>
+              }
+            </article>
+          </section>
+          <section class="panel weekly-panel"><div class="panel-head"><div><p class="overline">Esta semana</p><h3>Lo que necesita atención</h3></div><button type="button" (click)="navigate('settings')">Editar objetivo ↗</button></div>@for(task of data.tasks();track task.id){<label class="task-row" [class.done]="task.done"><input type="checkbox" [checked]="task.done" (change)="data.toggleTask(task.id)"><span><strong>{{ task.title }}</strong><small>{{ task.due }}</small></span></label>}</section>
+        }
+
+        @case ('orders') {
+          <section class="page-intro"><div><p class="overline">Operativa comercial</p><h2>Pedidos</h2><p>Del pago a la entrega, con cada cambio de estado visible y trazable.</p></div><button class="primary-action" type="button" (click)="showNotice('El alta manual quedará disponible al conectar POST /api/v1/orders.')">＋ Crear pedido manual</button></section>
+          <!-- Order state filters remain in the compact toolbar below. -->
+          <section class="panel table-panel">
+            <div class="advanced-filters"><label>Buscar<input [(ngModel)]="orderQuery" placeholder="Pedido, cliente o correo"></label><label>Desde<input type="date" [(ngModel)]="orderFrom"></label><label>Hasta<input type="date" [(ngModel)]="orderTo"></label><label>Total mínimo<input type="number" [(ngModel)]="orderMin" placeholder="0 €"></label><label>Total máximo<input type="number" [(ngModel)]="orderMax" placeholder="Sin límite"></label></div>
+            <div class="table-toolbar"><div class="filter-pills"><button [class.active]="orderFilter === 'all'" (click)="orderFilter='all'">Todos</button><button [class.active]="orderFilter === 'pendingPayment'" (click)="orderFilter='pendingPayment'">Pago pendiente</button><button [class.active]="orderFilter === 'paid'" (click)="orderFilter='paid'">Pagados</button><button [class.active]="orderFilter === 'preparing'" (click)="orderFilter='preparing'">Preparando</button><button [class.active]="orderFilter === 'shipped'" (click)="orderFilter='shipped'">Enviados</button><button [class.active]="orderFilter === 'delivered'" (click)="orderFilter='delivered'">Entregados</button><button [class.active]="orderFilter === 'collected'" (click)="orderFilter='collected'">Recogidos</button><button [class.active]="orderFilter === 'cancelled'" (click)="orderFilter='cancelled'">Cancelados</button></div><button class="secondary-action" type="button" (click)="exportData('csv')">Exportar CSV ↓</button></div>
+            <div class="data-table order-table">
+              <div class="table-row table-header"><span>Pedido</span><span>Cliente</span><span>Fecha</span><span>Estado</span><span>Pago</span><span>Total</span><span></span></div>
+              @for (order of filteredOrders(); track order.id) {
+                <div class="table-row clickable-row" (click)="selectedOrder.set(order)"><span><strong>{{ order.number }}</strong><small>{{ order.items }} productos</small></span><span><strong>{{ order.customer }}</strong><small>{{ order.email }}</small></span><span>{{ order.date }}</span><span><i class="status" [attr.data-status]="order.status">{{ statusLabel(order.status) }}</i></span><span class="payment-state" [attr.data-payment]="order.payment">{{ order.payment === 'succeeded' ? 'Cobrado por Stripe' : order.payment === 'pending' ? 'Pendiente en Stripe' : 'Devuelto' }}</span><span><strong>{{ order.total | currency:'EUR':'symbol':'1.2-2':'es' }}</strong></span><span class="order-row-actions" (click)="$event.stopPropagation()"><button class="row-action" type="button" (click)="selectedOrder.set(order)">Ver más</button><select class="order-action" [disabled]="!nextActions(order).length" (change)="data.setOrderStatus(order.id, $any($event.target).value); $any($event.target).value=''" aria-label="Actualizar preparación o entrega"><option value="">Acciones…</option>@for (action of nextActions(order); track action.status) { <option [value]="action.status">{{ action.label }}</option> }</select></span></div>
+              }
+              @if (!filteredOrders().length) { <div class="empty-filter"><strong>No hay pedidos con estos filtros</strong><span>Prueba otro estado, fecha o intervalo de importe.</span><button type="button" (click)="orderFilter='all';orderQuery='';orderFrom='';orderTo='';orderMin=null;orderMax=null">Limpiar filtros</button></div> }
+            </div>
+          </section>
+        }
+
+        @case ('catalog') { <ds-admin-workspace area="catalog" [initialQuery]="productQuery" /> }
+
+        @case ('inventory') { <ds-admin-workspace area="inventory" /> }
+
+        @case ('customers') { <ds-admin-workspace area="customers" [initialQuery]="customerQuery" /> }
+
+        @case ('finance') { <ds-admin-workspace area="finance" /> }
+
+        @case ('visits') { <ds-admin-workspace area="visits" /> }
+
+        @case ('billing') { <ds-admin-workspace area="billing" /> }
+        @case ('production') { <ds-admin-workspace area="production" /> }
+        @case ('settings') {
+          <section class="page-intro"><div><p class="overline">SaaS multiempresa</p><h2>Ajustes de la bodega</h2><p>Preferencias propias de Dominio de la Sierra. Cada futura empresa tendrá su configuración aislada.</p></div><button class="primary-action" type="button" (click)="showNotice('Cambios aplicados solo a esta vista. Aún no se guardan en el servidor.')">Guardar cambios</button></section>
+          <section class="settings-grid"><article class="panel settings-card"><p class="overline">Organización</p><h3>Identidad del tenant</h3><label>Nombre comercial<input value="Dominio de la Sierra"></label><label>Identificador<input value="dominio-de-la-sierra" readonly></label><label>NIF<input placeholder="Pendiente de configurar"></label><label>Zona horaria<select><option>Europe/Madrid</option></select></label></article><article class="panel settings-card"><p class="overline">Preferencias de lectura</p><h3>Tipografía en todo el panel</h3><label>Tamaño de letra<input type="range" min="90" max="125" step="5" [(ngModel)]="fontScale"><span>{{ fontScale }}%</span></label><label>Familia de letra<select [(ngModel)]="fontFamily"><option value="brand">Marca · DM Sans</option><option value="system">Sistema · Sans</option><option value="editorial">Editorial · Serif</option></select></label><label>Objetivo anual de botellas<input type="number" min="1" [(ngModel)]="annualGoal"></label><label>IVA por defecto<input type="number" min="0" max="100" [(ngModel)]="defaultVat"></label><p class="settings-hint">Cambios de lectura aplicados a navegación, tablas y formularios. Solo esta sesión; todavía no se guardan por usuario.</p></article></section>
+        }
+      }
+    </div>
+  </main>
+
+
+  @if (selectedOrder(); as order) {
+    <ds-admin-modal label="Detalle del pedido" (closed)="selectedOrder.set(null)"><div class="drawer-head"><div><p class="overline">{{ order.number }}</p><h2>{{ order.customer }}</h2></div><button (click)="selectedOrder.set(null)">×</button></div><div class="detail-status"><i class="status" [attr.data-status]="order.status">{{ statusLabel(order.status) }}</i><span class="payment-state" [attr.data-payment]="order.payment">Pago: {{ order.payment==='succeeded'?'cobrado por Stripe':order.payment==='pending'?'pendiente':'devuelto' }}</span></div><div class="detail-grid"><div><small>Entrega</small><strong>{{ order.address }}</strong><span>{{ order.postalCode }} · {{ order.city }}, {{ order.province }}</span></div><div><small>Transporte</small><strong>{{ order.carrier }}</strong><span>{{ order.channel }}</span></div><div><small>Contacto</small><strong>{{ order.email }}</strong><span>{{ order.notes||'Sin observaciones' }}</span></div></div><h3>Contenido del pedido</h3><div class="line-items">@for(item of order.lines;track item.reference){<div><span><strong>{{ item.product }}</strong><small>{{ item.reference }}</small></span><b>{{ item.quantity }} × {{ item.unitPrice|currency:'EUR' }}</b></div>}</div><div class="modal-total"><span>Total</span><strong>{{ order.total|currency:'EUR' }}</strong></div><div class="drawer-actions">@for(action of nextActions(order);track action.status){<button class="primary-action" (click)="data.setOrderStatus(order.id,action.status);selectedOrder.set(null)">{{ action.label }}</button>}<button class="danger-action" (click)="data.setOrderStatus(order.id,'cancelled');selectedOrder.set(null)">Cancelar pedido</button></div></ds-admin-modal>
+  }
+  @if (notice()) { <div class="crm-toast" role="status"><span>✓</span>{{ notice() }}</div> }
+</div>

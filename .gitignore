@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.angular/
+bin/
+obj/
+.env
+.env.*
+!.env.example
+*.pfx
+*.p12
+*.key
+*.user
+.vs/
+.idea/
+release/
